@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  nickname      String         @unique
+  xp            Int            @default(0)
+  level         Int            @default(1)
+  gamesPlayed   Int            @default(0)
+  gamesWon      Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  matchHistory  MatchHistory[]
+}
+
+model Room {
+  id          String   @id @default(nanoid())
+  code        String   @unique
+  hostId      String
+  status      String   @default("LOBBY") // LOBBY, PREPARING, PLAYING, ENDED
+  settings    Json     // Max players, round time, etc.
+  players     Player[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  nickname  String
+  score     Int      @default(0)
+  isReady   Boolean  @default(false)
+  isDrawer  Boolean  @default(false)
+  words     Word[]
+  socketId  String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Word {
+  id        String   @id @default(cuid())
+  content   String
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model MatchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score     Int
+  rank      Int
+  playedAt  DateTime @default(now())
+}
