@@ -17,7 +17,7 @@ services:
         value: https://doodle-play.onrender.com # Update with final URL
 
   # Frontend service
-  - type: static
+  - type: web
     name: doodle-play-client
     env: static
     plan: free
