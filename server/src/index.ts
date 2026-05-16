@@ -21,7 +21,7 @@ const io = new Server(server, {
 
 const prisma = new PrismaClient();
 const roomManager = new RoomManager(io);
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT || 3001);
 
 app.use(cors());
 app.use(express.json());
