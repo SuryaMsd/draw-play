@@ -4,6 +4,7 @@ import { Room, Player, GameStatus, GameSettings } from './types.js';
 
 export class RoomManager {
   private rooms: Map<string, Room> = new Map();
+  private roomIntervals: Map<string, NodeJS.Timeout> = new Map();
   private io: Server;
 
   constructor(io: Server) {
@@ -65,6 +66,10 @@ export class RoomManager {
         room.players.splice(playerIndex, 1);
         if (room.players.length === 0) {
           this.rooms.delete(code);
+          if (this.roomIntervals.has(code)) {
+            clearInterval(this.roomIntervals.get(code));
+            this.roomIntervals.delete(code);
+          }
           return { roomCode: code, isEmpty: true };
         }
         // Reassign host if host left
@@ -127,16 +132,20 @@ export class RoomManager {
     room.roundTimer = room.settings.roundTime;
     
     // Start timer interval
-    if (room.roundInterval) clearInterval(room.roundInterval);
-    room.roundInterval = setInterval(() => {
+    if (this.roomIntervals.has(room.code)) {
+      clearInterval(this.roomIntervals.get(room.code));
+    }
+    const interval = setInterval(() => {
       room.roundTimer--;
       this.io.to(room.code).emit('game:timer', { timer: room.roundTimer });
 
       if (room.roundTimer <= 0) {
-        if (room.roundInterval) clearInterval(room.roundInterval);
+        clearInterval(this.roomIntervals.get(room.code));
+        this.roomIntervals.delete(room.code);
         this.endRound(room);
       }
     }, 1000);
+    this.roomIntervals.set(room.code, interval);
   }
 
   private endRound(room: Room) {
@@ -166,7 +175,10 @@ export class RoomManager {
       player.score += room.roundTimer * 10;
       
       // End the round immediately so next player can draw
-      if (room.roundInterval) clearInterval(room.roundInterval);
+      if (this.roomIntervals.has(room.code)) {
+        clearInterval(this.roomIntervals.get(room.code));
+        this.roomIntervals.delete(room.code);
+      }
       this.endRound(room);
     }
 
