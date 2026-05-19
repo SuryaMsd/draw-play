@@ -25,4 +25,5 @@ export interface Room {
   currentRound: number;
   currentWord?: string;
   roundTimer: number;
+  roundInterval?: ReturnType<typeof setInterval>;
 }

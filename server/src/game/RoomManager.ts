@@ -20,7 +20,7 @@ export class RoomManager {
       settings: {
         maxPlayers: 4,
         roundTime: 80,
-        roundsCount: 3,
+        roundsCount: 2,
       },
       players: [
         {
@@ -112,6 +112,7 @@ export class RoomManager {
 
   private startRound(room: Room) {
     room.currentRound++;
+    room.status = 'PLAYING';
     
     // Rotate drawer
     room.players.forEach((p) => (p.isDrawer = false));
@@ -126,12 +127,13 @@ export class RoomManager {
     room.roundTimer = room.settings.roundTime;
     
     // Start timer interval
-    const interval = setInterval(() => {
+    if (room.roundInterval) clearInterval(room.roundInterval);
+    room.roundInterval = setInterval(() => {
       room.roundTimer--;
       this.io.to(room.code).emit('game:timer', { timer: room.roundTimer });
 
       if (room.roundTimer <= 0) {
-        clearInterval(interval);
+        if (room.roundInterval) clearInterval(room.roundInterval);
         this.endRound(room);
       }
     }, 1000);
@@ -139,6 +141,7 @@ export class RoomManager {
 
   private endRound(room: Room) {
     if (room.currentRound < room.settings.roundsCount * room.players.length) {
+      room.status = 'PREPARING';
       this.io.to(room.code).emit('game:round-end', { word: room.currentWord });
       setTimeout(() => {
         this.startRound(room);
@@ -161,6 +164,10 @@ export class RoomManager {
     if (isCorrect) {
       // Award points based on time left
       player.score += room.roundTimer * 10;
+      
+      // End the round immediately so next player can draw
+      if (room.roundInterval) clearInterval(room.roundInterval);
+      this.endRound(room);
     }
 
     return { isCorrect, room };
